@@ -1,15 +1,16 @@
+// @dart=2.9
+
 import 'dart:async';
 
 import 'dart:io';
-import 'dart:math';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:sensors/sensors.dart';
 import 'package:ext_storage/ext_storage.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:location/location.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 void main() => runApp(MyApp());
 
@@ -18,6 +19,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'IRI Data Collection',
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -33,27 +35,44 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  double x = 0;
-  double y = 0;
-  double z = 0;
+  double x = 0.0;
+  double y = 0.0;
+  double z = 0.0;
   bool saving = false;
+  var lastLocation;
+  final limitCount = 100; //number of chart points to show
+  final xPoints = <FlSpot>[];
+  final yPoints = <FlSpot>[];
+  final zPoints = <FlSpot>[];
+  int timeCount = 0;
+  String btnName = 'Save';
 
   @override
   void initState() {
-    Timer.periodic(Duration(seconds: 1), (timer) {
+    xPoints.add(FlSpot(0.0, 0.0));
+    yPoints.add(FlSpot(0.0, 0.0));
+    zPoints.add(FlSpot(0.0, 0.0));
+    super.initState();
+    Timer.periodic(Duration(milliseconds: 100), (timer) {
       if (saving == true) {
-        print('writing');
         _writeData();
       }
+      while (xPoints.length > limitCount) {
+        xPoints.removeAt(0);
+        yPoints.removeAt(0);
+        zPoints.removeAt(0);
+      }
     });
-    // TODO: implement initState
-    super.initState();
     accelerometerEvents.listen((AccelerometerEvent event) {
       setState(() {
         x = event.x;
         y = event.y;
         z = event.z;
+        xPoints.add(FlSpot(timeCount * 1.0, x));
+        yPoints.add(FlSpot(timeCount * 1.0, y));
+        zPoints.add(FlSpot(timeCount * 1.0, z));
       });
+      timeCount++;
     }); //get the sensor data and set then to the data types
   }
 
@@ -64,8 +83,12 @@ class _MyHomePageState extends State<MyHomePage> {
           ExtStorage.DIRECTORY_DOWNLOADS);
       final File file =
           await File('$directory/my_file.txt').create(recursive: true);
+      final _getLoc = await _getLocation();
+      final lat = _getLoc.latitude.toString();
+      final lon = _getLoc.longitude.toString();
       final time = DateTime.now();
-      file.writeAsStringSync('${time.toString()}, $x , $y , $z\n',
+      file.writeAsStringSync(
+          '${time.toString()}, x: $x , y: $y , z: $z, lat: $lat, lon: $lon\n',
           mode: FileMode.append);
     } else {
       await Permission.storage.request();
@@ -86,10 +109,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // if (saving == true) {
-
-    //   _writeData();
-    // }
+    final _width = MediaQuery.of(context).size.width;
     return Scaffold(
         appBar: AppBar(
           title: Text("IRI Data Collection"),
@@ -98,89 +118,165 @@ class _MyHomePageState extends State<MyHomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    if (saving == true) {
-                      saving = false;
-                    } else if (saving == false) {
-                      saving = true;
-                    }
-                  });
-                  //_writeData();
-                },
-                // onPressed: () {
-                //   setState(() {
-                //     saving = true;
-                //     _saveData();
-                //   });
-                // },
-                child: Text('save'),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Container(
+                    width: _width,
+                    height: 300,
+                    child: LineChart(
+                      LineChartData(
+                        minY: -10,
+                        maxY: 10,
+                        minX: xPoints.first.x,
+                        maxX: xPoints.last.x,
+                        lineTouchData: LineTouchData(enabled: false),
+                        clipData: FlClipData.all(),
+                        gridData: FlGridData(
+                          show: true,
+                        ),
+                        lineBarsData: [
+                          xLine(xPoints),
+                          yLine(yPoints),
+                          zLine(zPoints),
+                        ],
+                        titlesData: FlTitlesData(
+                          show: false,
+                          bottomTitles: SideTitles(
+                            showTitles: false,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              Table(
-                border: TableBorder.all(
-                    width: 2.0,
-                    color: Colors.blueAccent,
-                    style: BorderStyle.solid),
-                children: [
-                  TableRow(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          "X Asis : ",
-                          style: TextStyle(fontSize: 20.0),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Table(
+                  border: TableBorder.all(
+                      width: 2.0,
+                      color: Colors.blueAccent,
+                      style: BorderStyle.solid),
+                  children: [
+                    TableRow(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            "X Asis : ",
+                            style: TextStyle(fontSize: 20.0),
+                          ),
                         ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                            x.toStringAsFixed(
-                                2), //trim the asis value to 2 digit after decimal point
-                            style: TextStyle(fontSize: 20.0)),
-                      )
-                    ],
-                  ),
-                  TableRow(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          "Y Asis : ",
-                          style: TextStyle(fontSize: 20.0),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                              x.toStringAsFixed(
+                                  2), //trim the asis value to 2 digit after decimal point
+                              style: TextStyle(fontSize: 20.0)),
+                        )
+                      ],
+                    ),
+                    TableRow(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            "Y Asis : ",
+                            style: TextStyle(fontSize: 20.0),
+                          ),
                         ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                            y.toStringAsFixed(
-                                2), //trim the asis value to 2 digit after decimal point
-                            style: TextStyle(fontSize: 20.0)),
-                      )
-                    ],
-                  ),
-                  TableRow(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          "Z Asis : ",
-                          style: TextStyle(fontSize: 20.0),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                              y.toStringAsFixed(
+                                  2), //trim the asis value to 2 digit after decimal point
+                              style: TextStyle(fontSize: 20.0)),
+                        )
+                      ],
+                    ),
+                    TableRow(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            "Z Asis : ",
+                            style: TextStyle(fontSize: 20.0),
+                          ),
                         ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                            z.toStringAsFixed(
-                                2), //trim the asis value to 2 digit after decimal point
-                            style: TextStyle(fontSize: 20.0)),
-                      )
-                    ],
-                  ),
-                ],
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                              z.toStringAsFixed(
+                                  2), //trim the asis value to 2 digit after decimal point
+                              style: TextStyle(fontSize: 20.0)),
+                        )
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      if (saving == true) {
+                        saving = false;
+                        btnName = 'Save';
+                      } else if (saving == false) {
+                        saving = true;
+                        btnName = 'Stop';
+                      }
+                    });
+                  },
+                  child: Text(btnName),
+                ),
+              ),
+              SizedBox(
+                height: 5.0,
               ),
             ],
           ),
         ));
+  }
+
+  LineChartBarData xLine(List<FlSpot> points) {
+    return LineChartBarData(
+      spots: points,
+      dotData: FlDotData(
+        show: false,
+      ),
+      colors: [Colors.redAccent.withOpacity(0), Colors.redAccent],
+      colorStops: [0.1, 1.0],
+      barWidth: 4,
+      isCurved: false,
+    );
+  }
+
+  LineChartBarData yLine(List<FlSpot> points) {
+    return LineChartBarData(
+      spots: points,
+      dotData: FlDotData(
+        show: false,
+      ),
+      colors: [Colors.blueAccent.withOpacity(0), Colors.blueAccent],
+      colorStops: [0.1, 1.0],
+      barWidth: 4,
+      isCurved: false,
+    );
+  }
+
+  LineChartBarData zLine(List<FlSpot> points) {
+    return LineChartBarData(
+      spots: points,
+      dotData: FlDotData(
+        show: false,
+      ),
+      colors: [Colors.greenAccent.withOpacity(0), Colors.greenAccent],
+      colorStops: [0.1, 1.0],
+      barWidth: 4,
+      isCurved: false,
+    );
   }
 }
