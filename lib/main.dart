@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'dart:io';
 import 'dart:math';
 
@@ -6,6 +7,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sensors/sensors.dart';
+import 'package:ext_storage/ext_storage.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:location/location.dart';
 
 void main() => runApp(MyApp());
 
@@ -29,11 +33,19 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  late double x, y, z;
+  double x = 0;
+  double y = 0;
+  double z = 0;
   bool saving = false;
 
   @override
   void initState() {
+    Timer.periodic(Duration(seconds: 1), (timer) {
+      if (saving == true) {
+        print('writing');
+        _writeData();
+      }
+    });
     // TODO: implement initState
     super.initState();
     accelerometerEvents.listen((AccelerometerEvent event) {
@@ -46,19 +58,38 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   _writeData() async {
-    final Directory directory = await getApplicationDocumentsDirectory();
-    final File file = File('${directory.path}/my_file.txt');
-    await file.writeAsString('$x , $y , $z /n');
+    var spermission = await Permission.storage.status;
+    if (spermission.isGranted) {
+      final directory = await ExtStorage.getExternalStoragePublicDirectory(
+          ExtStorage.DIRECTORY_DOWNLOADS);
+      final File file =
+          await File('$directory/my_file.txt').create(recursive: true);
+      final time = DateTime.now();
+      file.writeAsStringSync('${time.toString()}, $x , $y , $z\n',
+          mode: FileMode.append);
+    } else {
+      await Permission.storage.request();
+      return;
+    }
   }
 
-  _saveData() async {
-    while (saving = true) {
-      Future.delayed(Duration(milliseconds: 100), _writeData());
+  _getLocation() async {
+    var lpermission = await Permission.location.status;
+    if (lpermission.isGranted) {
+      var _location = await Location().getLocation();
+      return _location;
+    } else {
+      await Permission.location.request();
+      return;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // if (saving == true) {
+
+    //   _writeData();
+    // }
     return Scaffold(
         appBar: AppBar(
           title: Text("IRI Data Collection"),
@@ -70,10 +101,20 @@ class _MyHomePageState extends State<MyHomePage> {
               ElevatedButton(
                 onPressed: () {
                   setState(() {
-                    saving = true;
-                    _saveData;
+                    if (saving == true) {
+                      saving = false;
+                    } else if (saving == false) {
+                      saving = true;
+                    }
                   });
+                  //_writeData();
                 },
+                // onPressed: () {
+                //   setState(() {
+                //     saving = true;
+                //     _saveData();
+                //   });
+                // },
                 child: Text('save'),
               ),
               Table(
