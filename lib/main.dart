@@ -10,8 +10,9 @@ import 'package:iri_app/newProject.dart';
 import 'package:sensors/sensors.dart';
 import 'package:ext_storage/ext_storage.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:location/location.dart';
+import 'package:location/location.dart' as l;
 import 'package:fl_chart/fl_chart.dart';
+import 'package:iri_app/verticalAcceleration.dart';
 
 void main() => runApp(MyApp());
 
@@ -39,12 +40,21 @@ class _MyHomePageState extends State<MyHomePage> {
   double x = 0.0;
   double y = 0.0;
   double z = 0.0;
+  double gx = 0.0;
+  double gy = 0.0;
+  double gz = 0.0;
+  List locationList;
+  List vAccList;
+  var storagePermission;
+  var locationPermission;
+  var accelerations = new Map();
   bool saving = false;
-  var lastLocation;
+  var getLocation;
+  var location = l.Location();
   final limitCount = 100; //number of chart points to show
   final xPoints = <FlSpot>[];
-  final yPoints = <FlSpot>[];
-  final zPoints = <FlSpot>[];
+  // final yPoints = <FlSpot>[];
+  // final zPoints = <FlSpot>[];
   int timeCount = 0;
   String btnName = 'Record';
   String roadName = 'Add a Road';
@@ -54,56 +64,103 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     xPoints.add(FlSpot(0.0, 0.0));
-    yPoints.add(FlSpot(0.0, 0.0));
-    zPoints.add(FlSpot(0.0, 0.0));
+    // yPoints.add(FlSpot(0.0, 0.0));
+    // zPoints.add(FlSpot(0.0, 0.0));
     super.initState();
     Timer.periodic(Duration(milliseconds: 100), (timer) {
       if (saving == true) {
+        // print('here');
         _writeData();
       }
       while (xPoints.length > limitCount) {
         xPoints.removeAt(0);
-        yPoints.removeAt(0);
-        zPoints.removeAt(0);
+        // yPoints.removeAt(0);
+        // zPoints.removeAt(0);
       }
     });
-    userAccelerometerEvents.listen((event) {
+    locationPermission = location.requestPermission().then((value) {
+      if (value == l.PermissionStatus.granted) {
+        location.onLocationChanged.listen((l.LocationData event) {
+          getLocation = event;
+          //print(getLocation);
+        });
+      }
+    });
+
+    Permission.storage.request().then((value) {
       setState(() {
-        x = event.x;
-        y = event.y;
-        z = event.z;
-        xPoints.add(FlSpot(timeCount * 1.0, x));
-        yPoints.add(FlSpot(timeCount * 1.0, y));
-        zPoints.add(FlSpot(timeCount * 1.0, z));
+        storagePermission = value;
+        //print(storagePermission);
       });
+    });
+
+    //get the accelerometer readings without the graity
+    userAccelerometerEvents.listen((event) {
+      x = event.x;
+      y = event.y;
+      z = event.z;
+
+      // setState(() {
+      //   x = event.x;
+      //   y = event.y;
+      //   z = event.z;
+      //   xPoints.add(FlSpot(timeCount * 1.0, x));
+      //   yPoints.add(FlSpot(timeCount * 1.0, y));
+      //   zPoints.add(FlSpot(timeCount * 1.0, z));
+      //   timeCount++;
+      // });
+    });
+    //get the accelerometer eading with the gavity
+    accelerometerEvents.listen((event) {
+      gx = event.x;
+      gy = event.y;
+      gz = event.z;
+      accelerations = {
+        'x': x,
+        'y': y,
+        'z': z,
+        'gx': gx,
+        'gy': gy,
+        'gz': gz,
+      };
+      xPoints.add(FlSpot(
+        timeCount * 1.0,
+        vAcceleration(accelerations),
+      ));
+      // print(x);
+      // print(accelerations);
+      //print(vAcceleration(accelerations));
+      // yPoints.add(FlSpot(timeCount * 1.0, y));
+      // zPoints.add(FlSpot(timeCount * 1.0, z));
       timeCount++;
+      setState(() {});
+      // setState(() {
+      //   gx = event.x;
+      //   gy = event.y;
+      //   gz = event.z;
+      // xPoints.add(FlSpot(timeCount * 1.0, x));
+      // yPoints.add(FlSpot(timeCount * 1.0, y));
+      // zPoints.add(FlSpot(timeCount * 1.0, z));
+      // });
     });
   }
 
   _writeData() async {
-    var spermission = await Permission.storage.status;
-    if (spermission.isGranted) {
+    if (storagePermission == PermissionStatus.granted) {
       final directory = await ExtStorage.getExternalStoragePublicDirectory(
           ExtStorage.DIRECTORY_DOWNLOADS);
       final File file =
           await File('$directory/$saveName.txt').create(recursive: true);
-      final _getLoc = await _getLocation();
-      final lat = _getLoc.latitude.toString();
-      final lon = _getLoc.longitude.toString();
+      //print(getLocation);
+      locationList.add(getLocation);
+      vAccList.add(vAcceleration(accelerations));
+      final lat = getLocation.latitude;
+      final lon = getLocation.longitude;
+      //print('$lat, $lon');
       final time = DateTime.now();
       file.writeAsStringSync(
           '${time.toString()}, x: ${x.toStringAsFixed(4)} , y: ${y.toStringAsFixed(4)} , z: ${z.toStringAsFixed(4)}, lat: $lat, lon: $lon\n',
           mode: FileMode.append);
-    } else {
-      return;
-    }
-  }
-
-  _getLocation() async {
-    var lpermission = await Permission.location.status;
-    if (lpermission.isGranted) {
-      var _location = await Location().getLocation();
-      return _location;
     } else {
       return;
     }
@@ -148,8 +205,8 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                       lineBarsData: [
                         xLine(xPoints),
-                        yLine(yPoints),
-                        zLine(zPoints),
+                        // yLine(yPoints),
+                        // zLine(zPoints),
                       ],
                       titlesData: FlTitlesData(
                         show: false,
@@ -398,4 +455,13 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
   }
+
+//   //This is based on the
+// //https://stackoverflow.com/questions/37727340/android-detect-downward-acceleration-specifically-an-elevator/39333427#39333427
+//   double _verticalAcceleration(Map results) {
+//     final double verticleAcc = ((results['x'] * results['gx'] / 9.8) +
+//         (results['y'] * results['gy'] / 9.8) +
+//         (results['z'] * results['gz'] / 9.8));
+//     return verticleAcc;
+//   }
 }
