@@ -6,7 +6,7 @@ import 'dart:math';
 double iriCalc(List<double> z) {
   double iri = 0.0;
   double rms = 0.0;
-  print(z);
+  //print(z);
   for (int i = 0; i < z.length - 1; i++) {
     rms += (pow(z[i], 2)).toDouble();
   }

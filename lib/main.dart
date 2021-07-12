@@ -41,26 +41,32 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  //for acceleration values without gravity
   double x = 0.0;
   double y = 0.0;
   double z = 0.0;
+  //for accelration values with gravity
   double gx = 0.0;
   double gy = 0.0;
   double gz = 0.0;
-  List<l.LocationData> locationList =
-      List<l.LocationData>.empty(growable: true);
-  List<double> vAccList = List<double>.empty(growable: true);
-  var storagePermission;
-  var locationPermission;
-  var accelerations = new Map();
-  bool saving = false;
-  l.LocationData getLocation;
+  double getIRI = 0.0; //hold the last IRI value
+  double tempIRI = 0.0; //hold the temp. IRI value
+  int distance100 = 0; //distance travelled (in 100m sections)
+  double vertAcc = 0.0; //get the verticle accelerations
+  List<l.LocationData> locationList = List<l.LocationData>.empty(
+      growable: true); //hold the location points for 100m section
+  List<double> vAccList = List<double>.empty(
+      growable: true); //hold the verticle accelerations for 100m section
+  var storagePermission; //storage permission status
+  var locationPermission; //location permission status
+  var accelerations =
+      new Map(); //hold accelerations values to pass to verticleAcceleration.dart
+  bool saving = false; //start recording the data
+  l.LocationData getLocation; //get the loation data
   var location = l.Location();
-  final limitCount = 100; //number of chart points to show
+  final limitCount = 10; //number of chart points to show
   final xPoints = <FlSpot>[];
-  // final yPoints = <FlSpot>[];
-  // final zPoints = <FlSpot>[];
-  int timeCount = 0;
+
   String btnName = 'Record';
   String roadName = 'Add a Road';
   var pageResult;
@@ -69,25 +75,20 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     xPoints.add(FlSpot(0.0, 0.0));
-    // yPoints.add(FlSpot(0.0, 0.0));
-    // zPoints.add(FlSpot(0.0, 0.0));
+
     super.initState();
-    Timer.periodic(Duration(milliseconds: 100), (timer) {
+    Timer.periodic(Duration(milliseconds: 50), (timer) {
       if (saving == true) {
-        // print('here');
         _writeData();
       }
       while (xPoints.length > limitCount) {
         xPoints.removeAt(0);
-        // yPoints.removeAt(0);
-        // zPoints.removeAt(0);
       }
     });
     locationPermission = location.requestPermission().then((value) {
       if (value == l.PermissionStatus.granted) {
         location.onLocationChanged.listen((l.LocationData event) {
           getLocation = event;
-          //print(getLocation);
         });
       }
     });
@@ -95,7 +96,6 @@ class _MyHomePageState extends State<MyHomePage> {
     Permission.storage.request().then((value) {
       setState(() {
         storagePermission = value;
-        //print(storagePermission);
       });
     });
 
@@ -104,16 +104,6 @@ class _MyHomePageState extends State<MyHomePage> {
       x = event.x;
       y = event.y;
       z = event.z;
-
-      // setState(() {
-      //   x = event.x;
-      //   y = event.y;
-      //   z = event.z;
-      //   xPoints.add(FlSpot(timeCount * 1.0, x));
-      //   yPoints.add(FlSpot(timeCount * 1.0, y));
-      //   zPoints.add(FlSpot(timeCount * 1.0, z));
-      //   timeCount++;
-      // });
     });
     //get the accelerometer eading with the gavity
     accelerometerEvents.listen((event) {
@@ -128,49 +118,40 @@ class _MyHomePageState extends State<MyHomePage> {
         'gy': gy,
         'gz': gz,
       };
-      xPoints.add(FlSpot(
-        timeCount * 1.0,
-        vAcceleration(accelerations),
-      ));
-      // print(x);
-      // print(accelerations);
-      //print(vAcceleration(accelerations));
-      // yPoints.add(FlSpot(timeCount * 1.0, y));
-      // zPoints.add(FlSpot(timeCount * 1.0, z));
-      timeCount++;
+
       setState(() {});
-      // setState(() {
-      //   gx = event.x;
-      //   gy = event.y;
-      //   gz = event.z;
-      // xPoints.add(FlSpot(timeCount * 1.0, x));
-      // yPoints.add(FlSpot(timeCount * 1.0, y));
-      // zPoints.add(FlSpot(timeCount * 1.0, z));
-      // });
     });
   }
 
+//write the data to a file and draw it on the chart
   _writeData() async {
     if (storagePermission == PermissionStatus.granted) {
       final directory = await ExtStorage.getExternalStoragePublicDirectory(
           ExtStorage.DIRECTORY_DOWNLOADS);
       final File file =
           await File('$directory/$saveName.txt').create(recursive: true);
-      //print(getLocation);
+
       if (getLocation != null && accelerations != null) {
+        vertAcc = vAcceleration(accelerations);
         locationList.add(getLocation);
-        vAccList.add(vAcceleration(accelerations));
+        vAccList.add(vertAcc);
         final double distance = getDistance(locationList);
+        //get the IRI values for every 100m distance
         if (locationList.length > 1) {
           if (distance <= 0.1) {
             //impliment the iri logging for every 100 m
-            print('iri: ${iriCalc(vAccList)}');
-            print('distance: $distance');
+            tempIRI = iriCalc(vAccList);
           } else if (distance > 0.1) {
-            //get the final iri value for the rection here???
-            print('clear');
+            getIRI = tempIRI;
+            print('distance: $distance100, iri: $getIRI');
+            xPoints.add(FlSpot(
+              distance100 * 1.0,
+              getIRI,
+            ));
+            //get the final iri value
             locationList.clear();
             vAccList.clear();
+            distance100++;
           }
         }
       }
@@ -178,8 +159,9 @@ class _MyHomePageState extends State<MyHomePage> {
       final lon = getLocation.longitude;
 
       final time = DateTime.now();
+      //write to the text file with the road name
       file.writeAsStringSync(
-          '${time.toString()}, x: ${x.toStringAsFixed(4)} , y: ${y.toStringAsFixed(4)} , z: ${z.toStringAsFixed(4)}, lat: $lat, lon: $lon\n',
+          '${time.toString()}, x: ${x.toStringAsFixed(4)} , y: ${y.toStringAsFixed(4)} , z: ${z.toStringAsFixed(4)}, lat: $lat, lon: $lon iri: $getIRI\n',
           mode: FileMode.append);
     } else {
       return;
@@ -214,8 +196,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   height: 300,
                   child: LineChart(
                     LineChartData(
-                      minY: -10,
-                      maxY: 10,
+                      minY: 0,
+                      maxY: 30,
                       minX: xPoints.first.x,
                       maxX: xPoints.last.x,
                       lineTouchData: LineTouchData(enabled: false),
@@ -225,13 +207,12 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                       lineBarsData: [
                         xLine(xPoints),
-                        // yLine(yPoints),
-                        // zLine(zPoints),
                       ],
                       titlesData: FlTitlesData(
-                        show: false,
+                        show: true,
+                        leftTitles: SideTitles(showTitles: false),
                         bottomTitles: SideTitles(
-                          showTitles: false,
+                          showTitles: true,
                         ),
                       ),
                     ),
@@ -252,14 +233,14 @@ class _MyHomePageState extends State<MyHomePage> {
                       Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Text(
-                          "X Asis : ",
+                          "Vert. Acceleration : ",
                           style: TextStyle(fontSize: 20.0),
                         ),
                       ),
                       Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Text(
-                          x.toStringAsFixed(
+                          vertAcc.toStringAsFixed(
                               2), //trim the asis value to 2 digit after decimal point
                           style: TextStyle(
                             fontSize: 20.0,
@@ -273,14 +254,14 @@ class _MyHomePageState extends State<MyHomePage> {
                       Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Text(
-                          "Y Asis : ",
+                          "IRI(100m) : ",
                           style: TextStyle(fontSize: 20.0),
                         ),
                       ),
                       Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Text(
-                            y.toStringAsFixed(
+                            getIRI.toStringAsFixed(
                                 2), //trim the asis value to 2 digit after decimal point
                             style: TextStyle(fontSize: 20.0)),
                       )
@@ -291,15 +272,13 @@ class _MyHomePageState extends State<MyHomePage> {
                       Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Text(
-                          "Z Asis : ",
+                          "Distance(m) : ",
                           style: TextStyle(fontSize: 20.0),
                         ),
                       ),
                       Padding(
                         padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                            z.toStringAsFixed(
-                                2), //trim the asis value to 2 digit after decimal point
+                        child: Text((distance100 * 100).toString(),
                             style: TextStyle(fontSize: 20.0)),
                       )
                     ],
@@ -315,7 +294,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 minWidth: 40.0,
                 onPressed: () {
                   if (roadName == 'Add a Road') {
-                    //print('in the if');
                     showDialog(
                       context: context,
                       builder: (BuildContext context) => AlertDialog(
@@ -422,32 +400,6 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  LineChartBarData yLine(List<FlSpot> points) {
-    return LineChartBarData(
-      spots: points,
-      dotData: FlDotData(
-        show: false,
-      ),
-      colors: [Colors.blueAccent.withOpacity(0), Colors.blueAccent],
-      colorStops: [0.1, 1.0],
-      barWidth: 4,
-      isCurved: false,
-    );
-  }
-
-  LineChartBarData zLine(List<FlSpot> points) {
-    return LineChartBarData(
-      spots: points,
-      dotData: FlDotData(
-        show: false,
-      ),
-      colors: [Colors.greenAccent.withOpacity(0), Colors.greenAccent],
-      colorStops: [0.1, 1.0],
-      barWidth: 4,
-      isCurved: false,
-    );
-  }
-
   void _waitforRoad(BuildContext context) async {
     pageResult = await Navigator.push(
       context,
@@ -475,13 +427,4 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
   }
-
-//   //This is based on the
-// //https://stackoverflow.com/questions/37727340/android-detect-downward-acceleration-specifically-an-elevator/39333427#39333427
-//   double _verticalAcceleration(Map results) {
-//     final double verticleAcc = ((results['x'] * results['gx'] / 9.8) +
-//         (results['y'] * results['gy'] / 9.8) +
-//         (results['z'] * results['gz'] / 9.8));
-//     return verticleAcc;
-//   }
 }
