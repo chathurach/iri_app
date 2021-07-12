@@ -6,6 +6,9 @@ import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:iri_app/getDistance.dart';
+import 'package:iri_app/iriCalculation.dart';
 import 'package:iri_app/newProject.dart';
 import 'package:sensors/sensors.dart';
 import 'package:ext_storage/ext_storage.dart';
@@ -20,6 +23,7 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'IRI Data Collection',
@@ -43,13 +47,14 @@ class _MyHomePageState extends State<MyHomePage> {
   double gx = 0.0;
   double gy = 0.0;
   double gz = 0.0;
-  List locationList;
-  List vAccList;
+  List<l.LocationData> locationList =
+      List<l.LocationData>.empty(growable: true);
+  List<double> vAccList = List<double>.empty(growable: true);
   var storagePermission;
   var locationPermission;
   var accelerations = new Map();
   bool saving = false;
-  var getLocation;
+  l.LocationData getLocation;
   var location = l.Location();
   final limitCount = 100; //number of chart points to show
   final xPoints = <FlSpot>[];
@@ -152,11 +157,26 @@ class _MyHomePageState extends State<MyHomePage> {
       final File file =
           await File('$directory/$saveName.txt').create(recursive: true);
       //print(getLocation);
-      locationList.add(getLocation);
-      vAccList.add(vAcceleration(accelerations));
+      if (getLocation != null && accelerations != null) {
+        locationList.add(getLocation);
+        vAccList.add(vAcceleration(accelerations));
+        final double distance = getDistance(locationList);
+        if (locationList.length > 1) {
+          if (distance <= 0.1) {
+            //impliment the iri logging for every 100 m
+            print('iri: ${iriCalc(vAccList)}');
+            print('distance: $distance');
+          } else if (distance > 0.1) {
+            //get the final iri value for the rection here???
+            print('clear');
+            locationList.clear();
+            vAccList.clear();
+          }
+        }
+      }
       final lat = getLocation.latitude;
       final lon = getLocation.longitude;
-      //print('$lat, $lon');
+
       final time = DateTime.now();
       file.writeAsStringSync(
           '${time.toString()}, x: ${x.toStringAsFixed(4)} , y: ${y.toStringAsFixed(4)} , z: ${z.toStringAsFixed(4)}, lat: $lat, lon: $lon\n',
@@ -295,7 +315,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 minWidth: 40.0,
                 onPressed: () {
                   if (roadName == 'Add a Road') {
-                    print('in the if');
+                    //print('in the if');
                     showDialog(
                       context: context,
                       builder: (BuildContext context) => AlertDialog(
@@ -438,7 +458,7 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       roadName = pageResult;
       saveName = roadName.replaceAll(RegExp('[^a-zA-Z0-9]'), '');
-      print(saveName);
+      //print(saveName);
     });
 
     var spermission = await Permission.storage.status;
