@@ -143,7 +143,7 @@ class _MyHomePageState extends State<MyHomePage> {
             tempIRI = iriCalc(vAccList);
           } else if (distance > 0.1) {
             getIRI = tempIRI;
-            print('distance: $distance100, iri: $getIRI');
+            //print('distance: $distance100, iri: $getIRI');
             xPoints.add(FlSpot(
               distance100 * 1.0,
               getIRI,
