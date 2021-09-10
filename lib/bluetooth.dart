@@ -284,110 +284,59 @@ class _BluetoothAppState extends State<BluetoothApp> {
                       ),
                       Padding(
                           padding: EdgeInsets.all(16.0),
-                          child: Column(
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  Container(
-                                    alignment: AlignmentDirectional.centerEnd,
-                                    child: Text('x:'),
+                          child: Center(
+                            child: Table(
+                              defaultColumnWidth: FixedColumnWidth(
+                                  ((MediaQuery.of(context).size.width - 35) /
+                                      6)),
+                              children: [
+                                TableRow(
+                                  children: [
+                                    _fillCell('x :'),
+                                    _fillCell(
+                                      fData[0].toStringAsFixed(2),
+                                    ),
+                                    _fillCell('y :'),
+                                    _fillCell(
+                                      fData[1].toStringAsFixed(2),
+                                    ),
+                                    _fillCell('z :'),
+                                    _fillCell(
+                                      fData[2].toStringAsFixed(2),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(children: [
+                                  _fillCell('xa:'),
+                                  _fillCell(
+                                    fData[3].toStringAsFixed(2),
                                   ),
-                                  Container(
-                                    alignment: AlignmentDirectional.centerEnd,
-                                    child: Text(fData[0].toStringAsFixed(2)),
+                                  _fillCell('ya:'),
+                                  _fillCell(
+                                    fData[4].toStringAsFixed(2),
                                   ),
-                                  Container(
-                                    alignment: AlignmentDirectional.centerEnd,
-                                    child: Text('y:'),
+                                  _fillCell('za:'),
+                                  _fillCell(
+                                    fData[5].toStringAsFixed(2),
                                   ),
-                                  Container(
-                                    alignment: AlignmentDirectional.centerEnd,
-                                    child: Text(fData[1].toStringAsFixed(2)),
+                                ]),
+                                TableRow(children: [
+                                  _fillCell('xr:'),
+                                  _fillCell(
+                                    fData[6].toStringAsFixed(2),
                                   ),
-                                  Container(
-                                    alignment: AlignmentDirectional.centerEnd,
-                                    child: Text('z:'),
+                                  _fillCell('yr:'),
+                                  _fillCell(
+                                    fData[7].toStringAsFixed(2),
                                   ),
-                                  Container(
-                                    alignment: AlignmentDirectional.centerEnd,
-                                    child: Text(fData[2].toStringAsFixed(2)),
+                                  _fillCell('zr:'),
+                                  _fillCell(
+                                    fData[8].toStringAsFixed(2),
                                   ),
-                                  // Text('x: ${fData[0].toStringAsFixed(2)}'),
-                                  // Text('y: ${fData[1].toStringAsFixed(2)}'),
-                                  // Text('z: ${fData[2].toStringAsFixed(2)}'),
-                                ],
-                              ),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  Text('xa: ${fData[3].toStringAsFixed(2)}'),
-                                  Text('ya: ${fData[4].toStringAsFixed(2)}'),
-                                  Text('za: ${fData[5].toStringAsFixed(2)}'),
-                                ],
-                              ),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  Text('xr: ${fData[5].toStringAsFixed(2)}'),
-                                  Text('yr: ${fData[6].toStringAsFixed(2)}'),
-                                  Text('zr: ${fData[7].toStringAsFixed(2)}'),
-                                ],
-                              ),
-                            ],
+                                ])
+                              ],
+                            ),
                           )),
-                      // Padding(
-                      //   padding: const EdgeInsets.all(16.0),
-                      //   child: Card(
-                      //     shape: RoundedRectangleBorder(
-                      //       side: new BorderSide(
-                      //         color: _deviceState == 0
-                      //             ? colors['neutralBorderColor']!
-                      //             : _deviceState == 1
-                      //                 ? colors['onBorderColor']!
-                      //                 : colors['offBorderColor']!,
-                      //         width: 3,
-                      //       ),
-                      //       borderRadius: BorderRadius.circular(4.0),
-                      //     ),
-                      //     elevation: _deviceState == 0 ? 4 : 0,
-                      //     child: Padding(
-                      //       padding: const EdgeInsets.all(8.0),
-                      //       child: Row(
-                      //         children: <Widget>[
-                      //           Expanded(
-                      //             child: Text(
-                      //               "DEVICE 1",
-                      //               style: TextStyle(
-                      //                 fontSize: 20,
-                      //                 color: _deviceState == 0
-                      //                     ? colors['neutralTextColor']
-                      //                     : _deviceState == 1
-                      //                         ? colors['onTextColor']
-                      //                         : colors['offTextColor'],
-                      //               ),
-                      //             ),
-                      //           ),
-                      //           // TextButton(
-                      //           //   onPressed: _connected
-                      //           //       ? _sendOnMessageToBluetooth
-                      //           //       : null,
-                      //           //   child: Text("ON"),
-                      //           // ),
-                      //           // TextButton(
-                      //           //   onPressed: _connected
-                      //           //       ? _sendOffMessageToBluetooth
-                      //           //       : null,
-                      //           //   child: Text("OFF"),
-                      //           // ),
-                      //         ],
-                      //       ),
-                      //     ),
-                      //   ),
-                      // ),
                     ],
                   ),
                   Container(
@@ -395,34 +344,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
                   ),
                 ],
               ),
-              // Expanded(
-              //   child: Padding(
-              //     padding: const EdgeInsets.all(20),
-              //     child: Center(
-              //       child: Column(
-              //         mainAxisAlignment: MainAxisAlignment.center,
-              //         children: <Widget>[
-              //           Text(
-              //             "NOTE: If you cannot find the device in the list, please pair the device by going to the bluetooth settings",
-              //             style: TextStyle(
-              //               fontSize: 15,
-              //               fontWeight: FontWeight.bold,
-              //               color: Colors.red,
-              //             ),
-              //           ),
-              //           SizedBox(height: 15),
-              //           ElevatedButton(
-              //             //elevation: 2,
-              //             child: Text("Bluetooth Settings"),
-              //             onPressed: () {
-              //               FlutterBluetoothSerial.instance.openSettings();
-              //             },
-              //           ),
-              //         ],
-              //       ),
-              //     ),
-              //   ),
-              // )
             ],
           ),
         ),
@@ -531,14 +452,14 @@ class _BluetoothAppState extends State<BluetoothApp> {
                     (packeBuffer[4].abs().toInt() & 0xff)) /
                 32768.0 *
                 16;
-            if (packeBuffer[1] < 0 && packeBuffer[0] < 0) {
+            if (packeBuffer[1] < 0 || packeBuffer[0] < 0) {
               fData[0] = fData[0] * -1;
             }
-            if (packeBuffer[3] < 0 && packeBuffer[2] < 0) {
-              fData[1] = fData[0] * -1;
+            if (packeBuffer[3] < 0 || packeBuffer[2] < 0) {
+              fData[1] = fData[1] * -1;
             }
-            if (packeBuffer[5] < 0 && packeBuffer[4] < 0) {
-              fData[2] = fData[0] * -1;
+            if (packeBuffer[5] < 0 || packeBuffer[4] < 0) {
+              fData[2] = fData[2] * -1;
             }
             //print('${fData[0]}, ${fData[1]}, ${fData[2]}');
             break;
@@ -556,13 +477,13 @@ class _BluetoothAppState extends State<BluetoothApp> {
                     (packeBuffer[4].abs().toInt() & 0xff)) /
                 32768.0 *
                 2000;
-            if (packeBuffer[1] < 0 && packeBuffer[0] < 0) {
+            if (packeBuffer[1] < 0 || packeBuffer[0] < 0) {
               fData[3] = fData[3] * -1;
             }
-            if (packeBuffer[3] < 0 && packeBuffer[2] < 0) {
+            if (packeBuffer[3] < 0 || packeBuffer[2] < 0) {
               fData[4] = fData[4] * -1;
             }
-            if (packeBuffer[5] < 0 && packeBuffer[4] < 0) {
+            if (packeBuffer[5] < 0 || packeBuffer[4] < 0) {
               fData[5] = fData[5] * -1;
             }
             //print('${fData[3]}, ${fData[4]}, ${fData[5]}');
@@ -581,13 +502,13 @@ class _BluetoothAppState extends State<BluetoothApp> {
                     (packeBuffer[4].abs().toInt() & 0xff)) /
                 32768.0 *
                 180;
-            if (packeBuffer[1] < 0 && packeBuffer[0] < 0) {
+            if (packeBuffer[1] < 0 || packeBuffer[0] < 0) {
               fData[6] = fData[6] * -1;
             }
-            if (packeBuffer[3] < 0 && packeBuffer[2] < 0) {
+            if (packeBuffer[3] < 0 || packeBuffer[2] < 0) {
               fData[7] = fData[7] * -1;
             }
-            if (packeBuffer[5] < 0 && packeBuffer[4] < 0) {
+            if (packeBuffer[5] < 0 || packeBuffer[4] < 0) {
               fData[8] = fData[8] * -1;
             }
             //print('${fData[3]}, ${fData[4]}, ${fData[5]}');
@@ -607,6 +528,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
 
     await connection!.close();
     show('Device disconnected');
+    fData.fillRange(0, 11, 0.0);
     if (!connection!.isConnected) {
       setState(() {
         _connected = false;
@@ -652,5 +574,17 @@ class _BluetoothAppState extends State<BluetoothApp> {
         duration: duration,
       ),
     );
+  }
+
+  TableCell _fillCell(String _text) {
+    TableCell _cell;
+    _cell = TableCell(
+      verticalAlignment: TableCellVerticalAlignment.middle,
+      child: Text(
+        _text,
+        textAlign: TextAlign.end,
+      ),
+    );
+    return _cell;
   }
 }
