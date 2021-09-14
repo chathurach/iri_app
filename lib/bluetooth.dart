@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import 'package:iri_app/onDataRecieved.dart';
 
 void main() => runApp(MyApp());
 
@@ -386,7 +387,13 @@ class _BluetoothAppState extends State<BluetoothApp> {
             _connected = true;
           });
 
-          connection!.input!.listen(_onDataReceived).onDone(() {
+          connection!.input!
+              .listen((value) => {
+                    setState(() {
+                      fData = onDataReceived(value);
+                    })
+                  })
+              .onDone(() {
             if (isDisconnecting) {
               print('Disconnecting locally!');
             } else {
@@ -405,118 +412,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
         setState(() => _isButtonUnavailable = false);
       }
     }
-  }
-
-  void _onDataReceived(Uint8List data) {
-    //print(data);
-    List<int> queuBuffer = List.empty(growable: true);
-    if (data.length > 0) {
-      for (int i = 0; i < data.length; i++) {
-        if (data[i] > 127) {
-          int temp = data[i] - 256;
-          queuBuffer.add(temp);
-        } else {
-          queuBuffer.add(data[i]);
-        }
-      }
-    }
-    //print(queuBuffer);
-    int sHead;
-    List<int> packeBuffer = List<int>.filled(9, 0);
-
-    while (queuBuffer.length >= 11) {
-      var temp = queuBuffer.first;
-      queuBuffer.removeAt(0);
-      //print('temp: $temp');
-      if (temp == 85) {
-        sHead = queuBuffer.first;
-        //print('sHead: $sHead');
-        queuBuffer.removeAt(0);
-        for (int i = 0; i <= 8; i++) {
-          packeBuffer[i] = queuBuffer.first;
-          //packeBuffer.add(queuBuffer.first);
-          queuBuffer.removeAt(0);
-        }
-        switch (sHead) {
-          case 81:
-            fData[0] = (packeBuffer[1].abs().toInt() << 8 |
-                    (packeBuffer[0].abs().toInt() & 0xff)) /
-                32768.0 *
-                16;
-
-            fData[1] = (packeBuffer[3].abs().toInt() << 8 |
-                    (packeBuffer[2].abs().toInt() & 0xff)) /
-                32768.0 *
-                16;
-            fData[2] = (packeBuffer[5].abs().toInt() << 8 |
-                    (packeBuffer[4].abs().toInt() & 0xff)) /
-                32768.0 *
-                16;
-            if (packeBuffer[1] < 0 || packeBuffer[0] < 0) {
-              fData[0] = fData[0] * -1;
-            }
-            if (packeBuffer[3] < 0 || packeBuffer[2] < 0) {
-              fData[1] = fData[1] * -1;
-            }
-            if (packeBuffer[5] < 0 || packeBuffer[4] < 0) {
-              fData[2] = fData[2] * -1;
-            }
-            //print('${fData[0]}, ${fData[1]}, ${fData[2]}');
-            break;
-          case 82:
-            fData[3] = (packeBuffer[1].abs().toInt() << 8 |
-                    (packeBuffer[0].abs().toInt() & 0xff)) /
-                32768.0 *
-                2000;
-
-            fData[4] = (packeBuffer[3].abs().toInt() << 8 |
-                    (packeBuffer[2].abs().toInt() & 0xff)) /
-                32768.0 *
-                2000;
-            fData[5] = (packeBuffer[5].abs().toInt() << 8 |
-                    (packeBuffer[4].abs().toInt() & 0xff)) /
-                32768.0 *
-                2000;
-            if (packeBuffer[1] < 0 || packeBuffer[0] < 0) {
-              fData[3] = fData[3] * -1;
-            }
-            if (packeBuffer[3] < 0 || packeBuffer[2] < 0) {
-              fData[4] = fData[4] * -1;
-            }
-            if (packeBuffer[5] < 0 || packeBuffer[4] < 0) {
-              fData[5] = fData[5] * -1;
-            }
-            //print('${fData[3]}, ${fData[4]}, ${fData[5]}');
-            break;
-          case 83:
-            fData[6] = (packeBuffer[1].abs().toInt() << 8 |
-                    (packeBuffer[0].abs().toInt() & 0xff)) /
-                32768.0 *
-                180;
-
-            fData[7] = (packeBuffer[3].abs().toInt() << 8 |
-                    (packeBuffer[2].abs().toInt() & 0xff)) /
-                32768.0 *
-                180;
-            fData[8] = (packeBuffer[5].abs().toInt() << 8 |
-                    (packeBuffer[4].abs().toInt() & 0xff)) /
-                32768.0 *
-                180;
-            if (packeBuffer[1] < 0 || packeBuffer[0] < 0) {
-              fData[6] = fData[6] * -1;
-            }
-            if (packeBuffer[3] < 0 || packeBuffer[2] < 0) {
-              fData[7] = fData[7] * -1;
-            }
-            if (packeBuffer[5] < 0 || packeBuffer[4] < 0) {
-              fData[8] = fData[8] * -1;
-            }
-            //print('${fData[3]}, ${fData[4]}, ${fData[5]}');
-            break;
-        }
-      }
-    }
-    setState(() {});
   }
 
   // Method to disconnect bluetooth
