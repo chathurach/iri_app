@@ -13,7 +13,6 @@ import 'package:iri_app/iriCalculation.dart';
 import 'package:iri_app/newProject.dart';
 import 'package:sensors/sensors.dart';
 import 'package:ext_storage/ext_storage.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:location/location.dart' as l;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:iri_app/verticalAcceleration.dart';
