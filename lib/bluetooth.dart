@@ -244,14 +244,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
                 children: <Widget>[
                   Column(
                     children: <Widget>[
-                      // Padding(
-                      //   padding: const EdgeInsets.only(top: 10),
-                      //   child: Text(
-                      //     "PAIRED DEVICES",
-                      //     style: TextStyle(fontSize: 24, color: Colors.blue),
-                      //     textAlign: TextAlign.center,
-                      //   ),
-                      // ),
                       Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Container(
