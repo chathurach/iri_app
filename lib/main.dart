@@ -8,6 +8,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iri_app/bluetooth.dart';
+import 'package:iri_app/dataModel.dart';
+import 'package:provider/provider.dart';
 // import 'package:iri_app/getDistance.dart';
 // import 'package:iri_app/iriCalculation.dart';
 // import 'package:iri_app/newProject.dart';
@@ -17,7 +19,16 @@ import 'package:iri_app/bluetooth.dart';
 // import 'package:fl_chart/fl_chart.dart';
 // import 'package:iri_app/verticalAcceleration.dart';
 
-void main() => runApp(MyApp());
+void main() => runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(
+            create: (_) => DataModel(),
+          )
+        ],
+        child: MyApp(),
+      ),
+    );
 
 class MyApp extends StatelessWidget {
   // final GlobalKey<ScaffoldMessengerState> _scaffoldKey =

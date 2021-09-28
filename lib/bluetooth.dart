@@ -11,8 +11,10 @@ import 'package:flutter/services.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import 'package:iri_app/dataModel.dart';
 import 'package:iri_app/onDataRecieved.dart';
 import 'package:location/location.dart';
+import 'package:provider/provider.dart';
 
 // void main() => runApp(MyApp());
 
@@ -344,55 +346,59 @@ class _BluetoothAppState extends State<BluetoothApp> {
                 Padding(
                     padding: EdgeInsets.all(16.0),
                     child: Center(
-                      child: Table(
-                        defaultColumnWidth: FixedColumnWidth(
-                            ((MediaQuery.of(context).size.width - 35) / 6)),
-                        children: [
-                          TableRow(
+                      child: Consumer<DataModel>(
+                        builder: (context, _data, child) {
+                          return Table(
+                            defaultColumnWidth: FixedColumnWidth(
+                                ((MediaQuery.of(context).size.width - 35) / 6)),
                             children: [
-                              _fillCell('x :'),
-                              _fillCell(
-                                fData[0].toStringAsFixed(2),
+                              TableRow(
+                                children: [
+                                  _fillCell('x :'),
+                                  _fillCell(
+                                    _data.fData[0].toStringAsFixed(2),
+                                  ),
+                                  _fillCell('y :'),
+                                  _fillCell(
+                                    _data.fData[1].toStringAsFixed(2),
+                                  ),
+                                  _fillCell('z :'),
+                                  _fillCell(
+                                    _data.fData[2].toStringAsFixed(2),
+                                  ),
+                                ],
                               ),
-                              _fillCell('y :'),
-                              _fillCell(
-                                fData[1].toStringAsFixed(2),
-                              ),
-                              _fillCell('z :'),
-                              _fillCell(
-                                fData[2].toStringAsFixed(2),
-                              ),
+                              TableRow(children: [
+                                _fillCell('xa:'),
+                                _fillCell(
+                                  _data.fData[3].toStringAsFixed(2),
+                                ),
+                                _fillCell('ya:'),
+                                _fillCell(
+                                  _data.fData[4].toStringAsFixed(2),
+                                ),
+                                _fillCell('za:'),
+                                _fillCell(
+                                  _data.fData[5].toStringAsFixed(2),
+                                ),
+                              ]),
+                              TableRow(children: [
+                                _fillCell('xr:'),
+                                _fillCell(
+                                  _data.fData[6].toStringAsFixed(2),
+                                ),
+                                _fillCell('yr:'),
+                                _fillCell(
+                                  _data.fData[7].toStringAsFixed(2),
+                                ),
+                                _fillCell('zr:'),
+                                _fillCell(
+                                  _data.fData[8].toStringAsFixed(2),
+                                ),
+                              ]),
                             ],
-                          ),
-                          TableRow(children: [
-                            _fillCell('xa:'),
-                            _fillCell(
-                              fData[3].toStringAsFixed(2),
-                            ),
-                            _fillCell('ya:'),
-                            _fillCell(
-                              fData[4].toStringAsFixed(2),
-                            ),
-                            _fillCell('za:'),
-                            _fillCell(
-                              fData[5].toStringAsFixed(2),
-                            ),
-                          ]),
-                          TableRow(children: [
-                            _fillCell('xr:'),
-                            _fillCell(
-                              fData[6].toStringAsFixed(2),
-                            ),
-                            _fillCell('yr:'),
-                            _fillCell(
-                              fData[7].toStringAsFixed(2),
-                            ),
-                            _fillCell('zr:'),
-                            _fillCell(
-                              fData[8].toStringAsFixed(2),
-                            ),
-                          ]),
-                        ],
+                          );
+                        },
                       ),
                     )),
                 Padding(
@@ -464,9 +470,10 @@ class _BluetoothAppState extends State<BluetoothApp> {
 
           connection!.input!
               .listen((value) => {
-                    setState(() {
-                      fData = onDataReceived(value);
-                    })
+                    onDataReceived(value)
+                    // setState(() {
+                    //   onDataReceived(value);
+                    // })
                   })
               .onDone(() {
             if (isDisconnecting) {

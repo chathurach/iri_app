@@ -3,7 +3,11 @@
 
 import 'dart:typed_data';
 
-List<double> onDataReceived(Uint8List data) {
+import 'package:iri_app/dataModel.dart';
+import 'dataModel.dart';
+import 'package:provider/provider.dart';
+
+void onDataReceived(Uint8List data) {
   List<double> _fData = List<double>.filled(11, 0.0);
   //print(data);
   List<int> queuBuffer = List.empty(growable: true);
@@ -111,5 +115,6 @@ List<double> onDataReceived(Uint8List data) {
       }
     }
   }
-  return _fData;
+  DataModel().setData(_fData);
+  //return _fData;
 }
