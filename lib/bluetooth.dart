@@ -1,35 +1,18 @@
 // For performing some operations asynchronously
 import 'dart:async';
-import 'dart:collection';
-import 'dart:convert';
-import 'dart:ffi';
+// import 'dart:collection';
+// import 'dart:convert';
+// import 'dart:ffi';
 
-import 'dart:typed_data';
+// import 'dart:typed_data';
 
 // For using PlatformException
 import 'package:flutter/services.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:iri_app/dataModel.dart';
-import 'package:iri_app/onDataRecieved.dart';
 import 'package:location/location.dart';
 import 'package:provider/provider.dart';
-
-// void main() => runApp(MyApp());
-
-// class MyApp extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       title: 'Flutter Demo',
-//       theme: ThemeData(
-//         primarySwatch: Colors.blue,
-//       ),
-//       home: BluetoothApp(),
-//     );
-//   }
-// }
 
 class BluetoothApp extends StatefulWidget {
   @override
@@ -56,7 +39,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
   StreamSubscription<LocationData>? _locationSubscription;
   String? _locationError;
   //location related data
-  bool _isRecording = false;
+  //bool _isRecording = false;
   bool isDisconnecting = false;
 
   Map<String, Color> colors = {
@@ -204,21 +187,24 @@ class _BluetoothAppState extends State<BluetoothApp> {
           });
         }
       }).listen((LocationData _currentLocation) {
-        setState(() {
-          _locationError = null;
-          _locationData = _currentLocation;
-          print(_locationData);
-          _isRecording = true;
-        });
+        Provider.of<DataModel>(context, listen: false)
+            .getLocation(_currentLocation);
+
+        //DataModel.getLocation(_currentLocation);
+        // setState(() {
+        //   _locationError = null;
+        //   //_locationData = _currentLocation;
+        //   //print(_locationData);
+        //   _isRecording = true;
+        // });
       });
     }
-    ;
   }
 
   Future<void> _stopRecord() async {
     _locationSubscription?.cancel();
+    Provider.of<DataModel>(context, listen: false).setRecording(false);
     setState(() {
-      _isRecording = false;
       _locationSubscription = null;
     });
   }
@@ -226,6 +212,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
   // Now, its time to build the UI
   @override
   Widget build(BuildContext context) {
+    print("Refresh");
     return Scaffold(
       appBar: AppBar(
         title: Text("Accelerometer Data"),
@@ -371,29 +358,29 @@ class _BluetoothAppState extends State<BluetoothApp> {
                               TableRow(children: [
                                 _fillCell('xa:'),
                                 _fillCell(
-                                  _data.fData[3].toStringAsFixed(2),
+                                  _data.fData[3].toStringAsFixed(1),
                                 ),
                                 _fillCell('ya:'),
                                 _fillCell(
-                                  _data.fData[4].toStringAsFixed(2),
+                                  _data.fData[4].toStringAsFixed(1),
                                 ),
                                 _fillCell('za:'),
                                 _fillCell(
-                                  _data.fData[5].toStringAsFixed(2),
+                                  _data.fData[5].toStringAsFixed(1),
                                 ),
                               ]),
                               TableRow(children: [
                                 _fillCell('xr:'),
                                 _fillCell(
-                                  _data.fData[6].toStringAsFixed(2),
+                                  _data.fData[6].toStringAsFixed(1),
                                 ),
                                 _fillCell('yr:'),
                                 _fillCell(
-                                  _data.fData[7].toStringAsFixed(2),
+                                  _data.fData[7].toStringAsFixed(1),
                                 ),
                                 _fillCell('zr:'),
                                 _fillCell(
-                                  _data.fData[8].toStringAsFixed(2),
+                                  _data.fData[8].toStringAsFixed(1),
                                 ),
                               ]),
                             ],
@@ -403,25 +390,32 @@ class _BluetoothAppState extends State<BluetoothApp> {
                     )),
                 Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Table(children: [
-                    TableRow(children: [
-                      _fillCell('latitude:'),
-                      _fillCell(!_isRecording
-                          ? '0.0'
-                          : _locationData.latitude.toString()),
-                      _fillCell('longitude:'),
-                      _fillCell(!_isRecording
-                          ? '0.0'
-                          : _locationData.longitude.toString()),
-                    ]),
-                  ]),
+                  child: Consumer<DataModel>(builder: (context, _l, child) {
+                    return Table(
+                      children: [
+                        TableRow(children: [
+                          _fillCell('latitude:'),
+                          _fillCell(!_l.recording
+                              ? '0.0'
+                              : _l.locationData.latitude.toString()),
+                          _fillCell('longitude:'),
+                          _fillCell(!_l.recording
+                              ? '0.0'
+                              : _l.locationData.longitude.toString()),
+                        ]),
+                      ],
+                    );
+                  }),
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    !_isRecording ? _onRecord() : _stopRecord();
-                  },
-                  child: Text(!_isRecording ? 'Record' : 'Stop'),
-                )
+                Consumer<DataModel>(builder: (context, _l, child) {
+                  return ElevatedButton(onPressed: () {
+                    !_l.recording ? _onRecord() : _stopRecord();
+                  }, child: Consumer<DataModel>(
+                    builder: (context, _l, child) {
+                      return Text(!_l.recording ? 'Record' : 'Stop');
+                    },
+                  ));
+                }),
               ],
             ),
             Container(
@@ -470,7 +464,9 @@ class _BluetoothAppState extends State<BluetoothApp> {
 
           connection!.input!
               .listen((value) => {
-                    onDataReceived(value)
+                    Provider.of<DataModel>(context, listen: false)
+                        .setData(value)
+                    //onDataReceived(value)
                     // setState(() {
                     //   onDataReceived(value);
                     // })
@@ -491,7 +487,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
           //print(error);
         });
         //show('Device connected');
-
         setState(() => _isButtonUnavailable = false);
       }
     }
@@ -555,6 +550,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
     );
   }
 
+//For update the accelerometer tabe values
   TableCell _fillCell(String _text) {
     TableCell _cell;
     _cell = TableCell(
