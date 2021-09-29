@@ -1,35 +1,43 @@
 // @dart=2.9
 
-import 'dart:async';
+// import 'dart:async';
 
-import 'dart:io';
+// import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iri_app/bluetooth.dart';
-import 'package:iri_app/getDistance.dart';
-import 'package:iri_app/iriCalculation.dart';
-import 'package:iri_app/newProject.dart';
-import 'package:sensors/sensors.dart';
-import 'package:ext_storage/ext_storage.dart';
-import 'package:location/location.dart' as l;
-import 'package:fl_chart/fl_chart.dart';
-import 'package:iri_app/verticalAcceleration.dart';
+import 'package:iri_app/dataModel.dart';
+import 'package:provider/provider.dart';
+// import 'package:iri_app/getDistance.dart';
+// import 'package:iri_app/iriCalculation.dart';
+// import 'package:iri_app/newProject.dart';
+// import 'package:sensors/sensors.dart';
+// import 'package:ext_storage/ext_storage.dart';
+// import 'package:location/location.dart' as l;
+// import 'package:fl_chart/fl_chart.dart';
+// import 'package:iri_app/verticalAcceleration.dart';
 
-void main() => runApp(MyApp());
+void main() => runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(
+            create: (_) => DataModel(),
+          )
+        ],
+        child: MyApp(),
+      ),
+    );
 
 class MyApp extends StatelessWidget {
+  // final GlobalKey<ScaffoldMessengerState> _scaffoldKey =
+  //     new GlobalKey<ScaffoldMessengerState>();
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'IRI Data Collection',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
       home: BluetoothApp(),
     );
   }

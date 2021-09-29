@@ -11,8 +11,10 @@ import 'package:flutter/services.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import 'package:iri_app/dataModel.dart';
 import 'package:iri_app/onDataRecieved.dart';
 import 'package:location/location.dart';
+import 'package:provider/provider.dart';
 
 // void main() => runApp(MyApp());
 
@@ -38,8 +40,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
   // Initializing the Bluetooth connection state to be unknown
   BluetoothState _bluetoothState = BluetoothState.UNKNOWN;
   // Initializing a global key, as it would help us in showing a SnackBar later
-  final GlobalKey<ScaffoldMessengerState> _scaffoldKey =
-      new GlobalKey<ScaffoldMessengerState>();
+
   // Get the instance of the Bluetooth
   FlutterBluetoothSerial _bluetooth = FlutterBluetoothSerial.instance;
   // Track the Bluetooth connection with the remote device
@@ -225,209 +226,208 @@ class _BluetoothAppState extends State<BluetoothApp> {
   // Now, its time to build the UI
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      scaffoldMessengerKey: _scaffoldKey,
-      home: Scaffold(
-        appBar: AppBar(
-          title: Text("Accelerometer Data"),
-          backgroundColor: Colors.deepPurple,
-          actions: <Widget>[
-            TextButton.icon(
-              icon: Icon(
-                Icons.refresh,
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Accelerometer Data"),
+        backgroundColor: Colors.deepPurple,
+        actions: <Widget>[
+          TextButton.icon(
+            icon: Icon(
+              Icons.refresh,
+              color: Colors.white,
+            ),
+            label: Text(
+              "Refresh",
+              style: TextStyle(
                 color: Colors.white,
               ),
-              label: Text(
-                "Refresh",
-                style: TextStyle(
-                  color: Colors.white,
-                ),
-              ),
-              // shape: RoundedRectangleBorder(
-              //   borderRadius: BorderRadius.circular(30),
-              // ),
-              // splashColor: Colors.deepPurple,
-              onPressed: () async {
-                // So, that when new devices are paired
-                // while the app is running, user can refresh
-                // the paired devices list.
-                await getPairedDevices().then((_) {
-                  show('Device list refreshed');
-                });
-              },
             ),
-          ],
-        ),
-        body: Container(
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            children: <Widget>[
-              Visibility(
-                visible: _isButtonUnavailable &&
-                    _bluetoothState == BluetoothState.STATE_ON,
-                child: LinearProgressIndicator(
-                  backgroundColor: Colors.yellow,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
-                ),
+            // shape: RoundedRectangleBorder(
+            //   borderRadius: BorderRadius.circular(30),
+            // ),
+            // splashColor: Colors.deepPurple,
+            onPressed: () async {
+              // So, that when new devices are paired
+              // while the app is running, user can refresh
+              // the paired devices list.
+              await getPairedDevices().then((_) {
+                show('Device list refreshed');
+              });
+            },
+          ),
+        ],
+      ),
+      body: Container(
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          children: <Widget>[
+            Visibility(
+              visible: _isButtonUnavailable &&
+                  _bluetoothState == BluetoothState.STATE_ON,
+              child: LinearProgressIndicator(
+                backgroundColor: Colors.yellow,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
               ),
-              Padding(
-                padding: const EdgeInsets.all(10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        'Enable Bluetooth',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 20.0,
-                        ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      'Enable Bluetooth',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 20.0,
                       ),
                     ),
-                    Switch(
-                      value: _bluetoothState.isEnabled,
-                      onChanged: (bool value) {
-                        future() async {
-                          if (value) {
-                            await FlutterBluetoothSerial.instance
-                                .requestEnable();
-                          } else {
-                            await FlutterBluetoothSerial.instance
-                                .requestDisable();
-                          }
-
-                          await getPairedDevices();
-                          _isButtonUnavailable = false;
-
-                          if (_connected) {
-                            _disconnect();
-                          }
+                  ),
+                  Switch(
+                    value: _bluetoothState.isEnabled,
+                    onChanged: (bool value) {
+                      future() async {
+                        if (value) {
+                          await FlutterBluetoothSerial.instance.requestEnable();
+                        } else {
+                          await FlutterBluetoothSerial.instance
+                              .requestDisable();
                         }
 
-                        future().then((_) {
-                          setState(() {});
-                        });
-                      },
-                    )
-                  ],
-                ),
-              ),
-              Column(
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Container(
-                      width: MediaQuery.of(context).size.width,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          Text(
-                            'Device:',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          DropdownButton<BluetoothDevice>(
-                            items: _getDeviceItems(),
-                            onChanged: (value) =>
-                                setState(() => _device = value!),
-                            value: _devicesList.isNotEmpty ? _device : null,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: _isButtonUnavailable
-                        ? null
-                        : _connected
-                            ? _disconnect
-                            : _connect,
-                    child: Text(_connected ? 'Disconnect' : 'Connect'),
-                  ),
-                  Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Center(
-                        child: Table(
-                          defaultColumnWidth: FixedColumnWidth(
-                              ((MediaQuery.of(context).size.width - 35) / 6)),
-                          children: [
-                            TableRow(
-                              children: [
-                                _fillCell('x :'),
-                                _fillCell(
-                                  fData[0].toStringAsFixed(2),
-                                ),
-                                _fillCell('y :'),
-                                _fillCell(
-                                  fData[1].toStringAsFixed(2),
-                                ),
-                                _fillCell('z :'),
-                                _fillCell(
-                                  fData[2].toStringAsFixed(2),
-                                ),
-                              ],
-                            ),
-                            TableRow(children: [
-                              _fillCell('xa:'),
-                              _fillCell(
-                                fData[3].toStringAsFixed(2),
-                              ),
-                              _fillCell('ya:'),
-                              _fillCell(
-                                fData[4].toStringAsFixed(2),
-                              ),
-                              _fillCell('za:'),
-                              _fillCell(
-                                fData[5].toStringAsFixed(2),
-                              ),
-                            ]),
-                            TableRow(children: [
-                              _fillCell('xr:'),
-                              _fillCell(
-                                fData[6].toStringAsFixed(2),
-                              ),
-                              _fillCell('yr:'),
-                              _fillCell(
-                                fData[7].toStringAsFixed(2),
-                              ),
-                              _fillCell('zr:'),
-                              _fillCell(
-                                fData[8].toStringAsFixed(2),
-                              ),
-                            ]),
-                          ],
-                        ),
-                      )),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Table(children: [
-                      TableRow(children: [
-                        _fillCell('latitude:'),
-                        _fillCell(!_isRecording
-                            ? '0.0'
-                            : _locationData.latitude.toString()),
-                        _fillCell('longitude:'),
-                        _fillCell(!_isRecording
-                            ? '0.0'
-                            : _locationData.longitude.toString()),
-                      ]),
-                    ]),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      !_isRecording ? _onRecord() : _stopRecord();
+                        await getPairedDevices();
+                        _isButtonUnavailable = false;
+
+                        if (_connected) {
+                          _disconnect();
+                        }
+                      }
+
+                      future().then((_) {
+                        setState(() {});
+                      });
                     },
-                    child: Text(!_isRecording ? 'Record' : 'Stop'),
                   )
                 ],
               ),
-              Container(
-                color: Colors.blue,
-              ),
-            ],
-          ),
+            ),
+            Column(
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Container(
+                    width: MediaQuery.of(context).size.width,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        Text(
+                          'Device:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        DropdownButton<BluetoothDevice>(
+                          items: _getDeviceItems(),
+                          onChanged: (value) =>
+                              setState(() => _device = value!),
+                          value: _devicesList.isNotEmpty ? _device : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: _isButtonUnavailable
+                      ? null
+                      : _connected
+                          ? _disconnect
+                          : _connect,
+                  child: Text(_connected ? 'Disconnect' : 'Connect'),
+                ),
+                Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Center(
+                      child: Consumer<DataModel>(
+                        builder: (context, _data, child) {
+                          return Table(
+                            defaultColumnWidth: FixedColumnWidth(
+                                ((MediaQuery.of(context).size.width - 35) / 6)),
+                            children: [
+                              TableRow(
+                                children: [
+                                  _fillCell('x :'),
+                                  _fillCell(
+                                    _data.fData[0].toStringAsFixed(2),
+                                  ),
+                                  _fillCell('y :'),
+                                  _fillCell(
+                                    _data.fData[1].toStringAsFixed(2),
+                                  ),
+                                  _fillCell('z :'),
+                                  _fillCell(
+                                    _data.fData[2].toStringAsFixed(2),
+                                  ),
+                                ],
+                              ),
+                              TableRow(children: [
+                                _fillCell('xa:'),
+                                _fillCell(
+                                  _data.fData[3].toStringAsFixed(2),
+                                ),
+                                _fillCell('ya:'),
+                                _fillCell(
+                                  _data.fData[4].toStringAsFixed(2),
+                                ),
+                                _fillCell('za:'),
+                                _fillCell(
+                                  _data.fData[5].toStringAsFixed(2),
+                                ),
+                              ]),
+                              TableRow(children: [
+                                _fillCell('xr:'),
+                                _fillCell(
+                                  _data.fData[6].toStringAsFixed(2),
+                                ),
+                                _fillCell('yr:'),
+                                _fillCell(
+                                  _data.fData[7].toStringAsFixed(2),
+                                ),
+                                _fillCell('zr:'),
+                                _fillCell(
+                                  _data.fData[8].toStringAsFixed(2),
+                                ),
+                              ]),
+                            ],
+                          );
+                        },
+                      ),
+                    )),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Table(children: [
+                    TableRow(children: [
+                      _fillCell('latitude:'),
+                      _fillCell(!_isRecording
+                          ? '0.0'
+                          : _locationData.latitude.toString()),
+                      _fillCell('longitude:'),
+                      _fillCell(!_isRecording
+                          ? '0.0'
+                          : _locationData.longitude.toString()),
+                    ]),
+                  ]),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    !_isRecording ? _onRecord() : _stopRecord();
+                  },
+                  child: Text(!_isRecording ? 'Record' : 'Stop'),
+                )
+              ],
+            ),
+            Container(
+              color: Colors.blue,
+            ),
+          ],
         ),
       ),
     );
@@ -470,9 +470,10 @@ class _BluetoothAppState extends State<BluetoothApp> {
 
           connection!.input!
               .listen((value) => {
-                    setState(() {
-                      fData = onDataReceived(value);
-                    })
+                    onDataReceived(value)
+                    // setState(() {
+                    //   onDataReceived(value);
+                    // })
                   })
               .onDone(() {
             if (isDisconnecting) {
@@ -544,7 +545,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
   }) async {
     print(message);
     await new Future.delayed(new Duration(milliseconds: 100));
-    _scaffoldKey.currentState!.showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       new SnackBar(
         content: new Text(
           message,
